@@ -8,28 +8,28 @@ public class Encoder {
 		String fileName = null;
 		try {
 			Scanner userIn = new Scanner(System.in);
-			System.out.println("Enter a file name to encode: ");
-			fileName = userIn.next();
+			//System.out.println("Enter a file name to encode: ");
+			//fileName = userIn.next();
+			fileName = "src/ORIGINAL.TXT";
 			original = new FileInputStream(fileName);
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(e.hashCode());
 		}
 
-		DoubleLinkedList freqList = new DoubleLinkedList();
+		AllInOneButTree allButTree = new AllInOneButTree();
 
 		byte rep;
 		while ((rep = (byte) original.read()) != -1) {
-			freqList.incrementFreq(rep);
+			allButTree.incrementFreq(rep);
 		}
 
-		System.out.println(freqList);
-		freqList.sort();
-		System.out.println(freqList);
+		System.out.println(allButTree);
+		allButTree.sort();
+		System.out.println(allButTree);
+
+		Tree huffman = new Tree(allButTree);
 		original.close();
-
-
-
 	}
 }
 
@@ -44,7 +44,7 @@ class Node {
 		this.rep = rep;
 		this.data = data;
 		this.left = null;
-		this.right= null;
+		this.right = null;
 		this.next = null;
 	}
 
@@ -89,7 +89,7 @@ class Node {
 	}
 }
 
-class DoubleLinkedList {
+class AllInOneButTree {
 	//Uses Node Left and Right for linking
 	Node head;
 	Node tail;
@@ -99,7 +99,7 @@ class DoubleLinkedList {
 		return size;
 	}
 
-	DoubleLinkedList() {
+	AllInOneButTree() {
 		head = null;
 		tail = null;
 		size = 0;
@@ -115,19 +115,16 @@ class DoubleLinkedList {
 		}
 		Node curNode = head;
 		Node sentinel = new Node(rep, 1);
-		tail.setRight(sentinel);
-		sentinel.setLeft(tail);
-		tail = sentinel;
+		tail.setNext(sentinel);
 		while (curNode.getRep() != rep) {
-			curNode = curNode.getRight();
+			curNode = curNode.getNext();
 		}
-		if (curNode == tail) {
+		if (curNode == sentinel) {
+			tail = sentinel;
 			return;
 		}
 		curNode.setData(curNode.getData() + 1);
-		tail = sentinel.getLeft();
-		tail.setRight(null);
-		sentinel.setLeft(null);
+		tail.setNext(null);
 		size--;
 	}
 
@@ -138,37 +135,34 @@ class DoubleLinkedList {
 		}
 	}
 
-	private void sortRecurse(DoubleLinkedList list) {
+	private void sortRecurse(AllInOneButTree list) {
 		if (list.getSize() == 2) {
 			if (list.tail.getData() < list.head.getData()) {
 				Node tail = list.tail;
 				list.tail = list.head;
 				list.head = tail;
-				list.tail.setRight(null);
-				list.tail.setLeft(tail);
-				list.head.setRight(list.tail);
-				list.head.setLeft(null);
+				list.tail.setNext(null);
+				list.head.setNext(list.tail);
 			}
 			return;
 		} else if (list.getSize() == 1) {
 			return;
 		}
 		int middle = list.getSize()/2;
-		DoubleLinkedList one = new DoubleLinkedList();
-		DoubleLinkedList two = new DoubleLinkedList();
+		AllInOneButTree one = new AllInOneButTree();
+		AllInOneButTree two = new AllInOneButTree();
 		Node curNode = list.head;
 		for (int i = 0; i < middle - 1; i++) {
-			curNode = curNode.getRight();
+			curNode = curNode.getNext();
 		}
 		one.head = list.head;
 		one.tail = curNode;
 		one.size = middle;
-		two.head = curNode.getRight();
+		two.head = curNode.getNext();
 		two.tail = list.tail;
 		two.size = list.getSize()-one.size;
 
-		one.tail.setRight(null);
-		two.head.setLeft(null);
+		one.tail.setNext(null);
 
 		if (one.size >= 2) {
 			sortRecurse(one);
@@ -178,49 +172,37 @@ class DoubleLinkedList {
 		}
 		if (one.head.getData() < two.head.getData()) {
 			list.head = one.head;
-			one.head = one.head.getRight();
-			list.head.setRight(null);
-			one.head.setLeft(null);
+			one.head = one.head.getNext();
+			list.head.setNext(null);
 			list.tail = list.head;
 			one.size--;
 		} else {
 			list.head = two.head;
-			two.head = two.head.getRight();
-			list.head.setRight(null);
-			two.head.setLeft(null);
+			two.head = two.head.getNext();
+			list.head.setNext(null);
 			list.tail = list.head;
 			two.size--;
 		}
 		while (one.size > 0 && two.size > 0) {
 			if (one.head.getData() < two.head.getData()) {
-				list.tail.setRight(one.head);
-				one.head.setLeft(list.tail);
+				list.tail.setNext(one.head);
 				list.tail = one.head;
-				one.head = one.head.getRight();
-				if (one.head != null) {
-					one.head.setLeft(null);
-				}
-				list.tail.setRight(null);
+				one.head = one.head.getNext();
+				list.tail.setNext(null);
 				one.size--;
 			} else {
-				list.tail.setRight(two.head);
-				two.head.setLeft(list.tail);
+				list.tail.setNext(two.head);
 				list.tail = two.head;
-				two.head = two.head.getRight();
-				if (two.head != null) {
-					two.head.setLeft(null);
-				}
-				list.tail.setRight(null);
+				two.head = two.head.getNext();
+				list.tail.setNext(null);
 				two.size--;
 			}
 		}
 		if (one.size > 0) {
-			list.tail.setRight(one.head);
-			one.head.setLeft(list.tail);
+			list.tail.setNext(one.head);
 			list.tail = one.tail;
 		} else if (two.size > 0) {
-			list.tail.setRight(two.head);
-			two.head.setLeft(list.tail);
+			list.tail.setNext(two.head);
 			list.tail = two.tail;
 		}
 	}
@@ -231,54 +213,40 @@ class DoubleLinkedList {
 		String out = "";
 		while (curNode != null) {
 			out += (char) curNode.getRep() + " " + curNode.getData() + ", ";
-			curNode = curNode.getRight();
+			curNode = curNode.getNext();
 		}
 		return out;
 	}
 
-	public Node pop() {
-		if (head == null) {
-			return null;
-		}
-		Node first = head;
-		head = first.getRight();
-		if (head != null) {
-			head.setLeft(null);
-			first.setRight(null);
-		} else {
-			head = null;
-			tail = null;
-		}
-		return first;
-	}
-}
-
-class InversePriorityQueue {
-	Node head;
-	Node tail;
-	int size;
-
-	InversePriorityQueue() {
-		head = null;
-		tail = null;
-		size = 0;
-	}
-
 	public void enqueue(Node node) {
-		tail.setNext(node);
 		if (size == 0) {
+			tail = node;
 			head = tail;
+			size ++;
+			return;
 		}
+
+		tail.setNext(node);
+
+		tail = node;
 		size++;
 	}
 
+	//dequeue min first
 	public Node dequeue() {
 		if (size == 0) {
 			return null;
 		}
+		if (size == 1) {
+			size = 0;
+			Node ret = head;
+			head = null;
+			tail = null;
+			return ret;
+		}
 		Node minNode = head;
 		Node curNode = head;
-		Node priorToMinNode = head;
+		Node priorToMinNode = null;
 		while (curNode.getNext() != null) {
 			if (curNode.getNext().getData() < minNode.getData()) {
 				priorToMinNode = curNode;
@@ -286,20 +254,58 @@ class InversePriorityQueue {
 			}
 			curNode = curNode.getNext();
 		}
-		priorToMinNode.setNext(minNode.getNext());
+		if (priorToMinNode != null) {
+			priorToMinNode.setNext(minNode.getNext());
+		} else {
+			head = minNode.getNext();
+		}
+		minNode.setNext(null);
+		size--;
 		return minNode;
 	}
 }
 
-class TreeBuilder {
-	InversePriorityQueue queue;
-	TreeBuilder(DoubleLinkedList list) {
-		queue = new InversePriorityQueue();
-		while (list.size > 0) {
-			Node temp = list.pop();
-			temp.setLeft(null);
-			temp.setRight(null);
-			queue.enqueue(temp);
+class Tree {
+	AllInOneButTree queue;
+	Tree (AllInOneButTree queue){
+		this.queue = queue;
+		huffmanBuilder(queue);
+	}
+
+	private void huffmanBuilder(AllInOneButTree queue) {
+		while (queue.size > 1) {
+			System.out.println(queue + " 1 " + queue.getSize());
+
+			Node left = queue.dequeue();
+			System.out.println(queue + " 2 " + queue.getSize());
+
+			Node right = queue.dequeue();
+			System.out.println(queue + " 3 " + queue.getSize());
+			int data = 0;
+			if (left != null) {
+				data += left.getData();
+			}
+			if (right != null) {
+				data += right.getData();
+			}
+			Node parent = new Node((byte) -1 , data);
+			parent.setLeft(left);
+			parent.setRight(right);
+			queue.enqueue(parent);
+			System.out.println(queue + " 4 " + queue.getSize());
 		}
+		System.out.println(this);
+	}
+
+	@Override
+	public String toString() {
+		return recPrint(queue.head);
+	}
+
+	private String recPrint(Node e) {
+		if (e.getRep() == (byte) -1){
+			return "(" + recPrint(e.getLeft()) + " " + recPrint(e.getRight()) + ")";
+		}
+		return ""+(e.getRep());
 	}
 }
