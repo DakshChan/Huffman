@@ -1,4 +1,6 @@
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Scanner;
 
 public class Encoder {
@@ -8,18 +10,18 @@ public class Encoder {
 		String filePath = null;
 		try {
 			Scanner userIn = new Scanner(System.in);
-			//System.out.println("Enter a filePath to encode: ");
-			//filePath = userIn.next();
-			filePath = "src/original.jpg";
+			System.out.println("Enter a filePath to encode: ");
+			filePath = userIn.next();
+			//filePath = "src/original.jpg";
 			original = new FileInputStream(filePath);
-			compressed = new FileOutputStream(filePath.substring(0, filePath.lastIndexOf("/")+1)+"compressed.mzip");
+			compressed = new FileOutputStream(filePath.substring(0, filePath.lastIndexOf("/")+1)+"compressed.txt");
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(e.hashCode());
 		}
 
-		//writeString(compressed, filePath.substring(filePath.lastIndexOf("/") + 1));
-		writeString(compressed, "src/done.jpg");
+		writeString(compressed, filePath.substring(filePath.lastIndexOf("/") + 1));
+		//writeString(compressed, "src/done.jpg");
 		writeString(compressed, "\n");
 
 		AllInOneButTree allButTree = new AllInOneButTree();
