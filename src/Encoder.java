@@ -1,27 +1,32 @@
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.Scanner;
 
 public class Encoder {
 	public static void main(String[] args) throws IOException {
 		FileInputStream original = null;
-		String fileName = null;
+		FileOutputStream compressed = null;
+		String filePath = null;
 		try {
 			Scanner userIn = new Scanner(System.in);
-			//System.out.println("Enter a file name to encode: ");
-			//fileName = userIn.next();
-			fileName = "src/ORIGINAL.TXT";
-			original = new FileInputStream(fileName);
+			//System.out.println("Enter a filePath to encode: ");
+			//filePath = userIn.next();
+			filePath = "src/original.txt";
+			original = new FileInputStream(filePath);
+			compressed = new FileOutputStream(filePath.substring(0, filePath.lastIndexOf("/")+1)+"compressed.mzip");
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(e.hashCode());
 		}
 
+		//writeString(compressed, filePath.substring(filePath.lastIndexOf("/") + 1));
+		writeString(compressed, "src/done.txt");
+		writeString(compressed, "\n");
+
 		AllInOneButTree allButTree = new AllInOneButTree();
 
-		byte rep;
-		while ((rep = (byte) original.read()) != -1) {
-			allButTree.incrementFreq(rep);
+		int rep;
+		while ((rep = original.read()) != -1) {
+			allButTree.incrementFreq((byte) rep);
 		}
 
 		System.out.println(allButTree);
@@ -29,7 +34,57 @@ public class Encoder {
 		System.out.println(allButTree);
 
 		Tree huffman = new Tree(allButTree);
+		System.out.println(huffman);
+		System.out.println(allButTree);
+
+		writeString(compressed, huffman.toString());
+		writeString(compressed, "\n");
+
+		System.out.println(8 - huffman.getPadding());
+		writeString(compressed, "" + (8 - huffman.getPadding()));
+		writeString(compressed, "\n");
+
 		original.close();
+
+		original = new FileInputStream(filePath);
+
+		byte writeBuffer = 0x0;
+		byte writebufferLen = 0;
+		while ((rep = original.read()) != -1) {
+			int huffRep = allButTree.get((byte) rep);
+			byte remainingBytes = 31;
+			while (huffRep > 0) {
+				remainingBytes --;
+				huffRep = huffRep << 1;
+			}
+			for (byte i = 0; i < remainingBytes; i++) {
+				huffRep = huffRep << 1;
+				if (huffRep < 0) {
+					writeBuffer = (byte) ((writeBuffer << 1) + 1);
+				} else {
+					writeBuffer = (byte) (writeBuffer << 1);
+				}
+				writebufferLen++;
+				if (writebufferLen == 8) {
+					compressed.write(writeBuffer);
+					writeBuffer = 0x0;
+					writebufferLen = 0;
+				}
+			}
+		}
+		if (writebufferLen != 0) {
+			writeBuffer = (byte) (writeBuffer << (8 - writebufferLen));
+			compressed.write(writeBuffer);
+		}
+
+		compressed.close();
+	}
+
+	public static void writeString(FileOutputStream out, String string) throws IOException {
+		char[] write = string.toCharArray();
+		for (char c: write) {
+			out.write((byte) c);
+		}
 	}
 }
 
@@ -39,6 +94,7 @@ class Node {
 	private Node left;
 	private Node right;
 	private Node next;
+	private boolean leaf;
 
 	Node (byte rep, int data) {
 		this.rep = rep;
@@ -46,6 +102,7 @@ class Node {
 		this.left = null;
 		this.right = null;
 		this.next = null;
+		this.leaf = true;
 	}
 
 	public byte getRep() {
@@ -87,10 +144,18 @@ class Node {
 	public void setNext(Node next) {
 		this.next = next;
 	}
+
+	public boolean isLeaf() {
+		return this.leaf;
+	}
+
+	public void setLeaf(boolean leaf) {
+		this.leaf = leaf;
+	}
 }
 
 class AllInOneButTree {
-	//Uses Node Left and Right for linking
+	//Uses Node Next for linking
 	Node head;
 	Node tail;
 	int size;
@@ -126,6 +191,20 @@ class AllInOneButTree {
 		curNode.setData(curNode.getData() + 1);
 		tail.setNext(null);
 		size--;
+	}
+
+	public int get(byte rep) {
+		if (head == null) {
+			return -1;
+		}
+		Node curNode = head;
+		Node sentinel = new Node(rep, -1);
+		tail.setNext(sentinel);
+		while (curNode.getRep() != rep) {
+			curNode = curNode.getNext();
+		}
+		tail.setNext(null);
+		return curNode.getData();
 	}
 
 	//Sort least data to greatest using merge sort
@@ -255,7 +334,12 @@ class AllInOneButTree {
 			curNode = curNode.getNext();
 		}
 		if (priorToMinNode != null) {
-			priorToMinNode.setNext(minNode.getNext());
+			if (minNode.getNext() == null) {
+				tail = priorToMinNode;
+				priorToMinNode.setNext(null);
+			} else {
+				priorToMinNode.setNext(minNode.getNext());
+			}
 		} else {
 			head = minNode.getNext();
 		}
@@ -266,21 +350,21 @@ class AllInOneButTree {
 }
 
 class Tree {
-	AllInOneButTree queue;
+
+	Node head;
+	int padding;
+	int freq;
+
 	Tree (AllInOneButTree queue){
-		this.queue = queue;
 		huffmanBuilder(queue);
+		//data is 0x001XXXX where x is huffman rep
+		assignBinaryAndBackToQueue(queue, head, 0x1);
 	}
 
 	private void huffmanBuilder(AllInOneButTree queue) {
 		while (queue.size > 1) {
-			System.out.println(queue + " 1 " + queue.getSize());
-
 			Node left = queue.dequeue();
-			System.out.println(queue + " 2 " + queue.getSize());
-
 			Node right = queue.dequeue();
-			System.out.println(queue + " 3 " + queue.getSize());
 			int data = 0;
 			if (left != null) {
 				data += left.getData();
@@ -289,22 +373,45 @@ class Tree {
 				data += right.getData();
 			}
 			Node parent = new Node((byte) -1 , data);
+			parent.setLeaf(false);
 			parent.setLeft(left);
 			parent.setRight(right);
 			queue.enqueue(parent);
-			System.out.println(queue + " 4 " + queue.getSize());
 		}
-		System.out.println(this);
+		this.head = queue.head;
+		queue.dequeue();
+	}
+
+	private void assignBinaryAndBackToQueue(AllInOneButTree queue, Node e, int encoded) {
+		if (e == null) {
+			return;
+		}
+		if (!e.isLeaf()){
+			assignBinaryAndBackToQueue(queue, e.getLeft(), encoded<<1);
+			assignBinaryAndBackToQueue(queue, e.getRight(),(encoded<<1) | 0x1);
+		} else {
+			padding += (e.getData() * (32 - Integer.numberOfLeadingZeros(encoded) - 1)) % 8;
+			e.setData(encoded);
+			queue.enqueue(e);
+		}
+	}
+
+	public int getPadding() {
+		padding = padding % 8;
+		return padding;
 	}
 
 	@Override
 	public String toString() {
-		return recPrint(queue.head);
+		return recursivePrintNode(head);
 	}
 
-	private String recPrint(Node e) {
-		if (e.getRep() == (byte) -1){
-			return "(" + recPrint(e.getLeft()) + " " + recPrint(e.getRight()) + ")";
+	private String recursivePrintNode(Node e) {
+		if (e == null) {
+			return "";
+		}
+		if (!e.isLeaf()){
+			return "(" + recursivePrintNode(e.getLeft()) + " " + recursivePrintNode(e.getRight()) + ")";
 		}
 		return ""+(e.getRep());
 	}
