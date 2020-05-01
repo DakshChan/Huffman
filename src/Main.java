@@ -1,7 +1,5 @@
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Stack;
 
 public class Main {
 
@@ -14,12 +12,12 @@ public class Main {
         }
     }
 
-    public static int occurances(String str, String o) {
+    public static int occurrences(String str, String o) {
         return str.length() - str.replace("(", "").length();
     }
 
     // Creates a look up table for the characters in the compressed file
-    public static void readTree(String tree, String path, HashMap<String, Character> data) {
+    public static void readTree(String tree, String path, Map data) {
 
         tree = tree.trim();
 
@@ -28,7 +26,7 @@ public class Main {
             return;
         }
 
-        if (occurances(tree, "(") == 1 && occurances(tree, ")") == 1) {
+        if (occurrences(tree, "(") == 1 && occurrences(tree, ")") == 1) {
             int space = tree.indexOf(" ");
             data.put(path + "0", (char) Integer.parseInt(tree.substring(1, space)));
             data.put(path + "1", (char) Integer.parseInt(tree.substring(space+1, tree.length()-1)));
@@ -59,7 +57,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        String path = "src/compressed.mzip";
+        String path = "src/COMPRESSED.MZIP";
         File file = new File(path);
 
         try {
@@ -80,7 +78,7 @@ public class Main {
                 tree += singleChar;
             }
 
-            HashMap<String, Character> data = new HashMap<>();
+            Map data = new Map();
 
             readTree(tree, "", data);
 
@@ -102,14 +100,21 @@ public class Main {
             // However, if the file gets larger, it won't perform as well
 
             /*byte[] bytes = fin.readAllBytes();
+
+            for (byte var : bytes) {
+                for (int i = 7; i >= 0; i--) {
+                    System.out.print((var >>> i) & 1);
+                }
+            }
+            System.out.println();
+
             String compressed = "";
             for (byte baz : bytes) {
                 String str = String.format("%8s", Integer.toBinaryString(baz & 0xFF)).replace(' ', '0');
                 compressed += str;
             }
 
-            // TODO: Change it so it reads two bytes, gets the data, and then saves it
-            // Don't read the entire file and save it, read and write on go
+            System.out.println(compressed);
 
             int index = 0;
             String decompressed = "";
