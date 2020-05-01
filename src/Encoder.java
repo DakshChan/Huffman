@@ -14,13 +14,13 @@ public class Encoder {
 			filePath = userIn.next();
 			//filePath = "src/original.jpg";
 			original = new FileInputStream(filePath);
-			compressed = new FileOutputStream(filePath.substring(0, filePath.lastIndexOf("/")+1)+"compressed.txt");
+			compressed = new FileOutputStream(filePath.substring(0, filePath.lastIndexOf("/")+1)+"compressed.mzip");
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(e.hashCode());
 		}
 
-		writeString(compressed, filePath.substring(filePath.lastIndexOf("/") + 1));
+		writeString(compressed, (filePath.substring(filePath.lastIndexOf("/") + 1)));
 		//writeString(compressed, "src/done.jpg");
 		writeString(compressed, "\n");
 
