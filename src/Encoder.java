@@ -1,26 +1,25 @@
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.Scanner;
 
 public class Encoder {
 	public static void main(String[] args) throws IOException {
-		FileInputStream original = null;
-		FileOutputStream compressed = null;
+		BufferedInputStream original = null;
+		BufferedOutputStream compressed = null;
 		String filePath = null;
 		try {
 			Scanner userIn = new Scanner(System.in);
 			System.out.println("Enter a filePath to encode: ");
 			filePath = userIn.next();
+			userIn.close();
 			//filePath = "src/original.jpg";
-			original = new FileInputStream(filePath);
-			compressed = new FileOutputStream(filePath.substring(0, filePath.lastIndexOf("/")+1)+"compressed.mzip");
+			original = new BufferedInputStream(new FileInputStream(filePath));
+			compressed = new BufferedOutputStream(new FileOutputStream(filePath.substring(0, filePath.lastIndexOf("\\")+1)+ "compressed.mzip"));
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(e.hashCode());
 		}
 
-		writeString(compressed, (filePath.substring(filePath.lastIndexOf("/") + 1)));
+		writeString(compressed, (filePath.substring(filePath.lastIndexOf("\\") + 1)));
 		//writeString(compressed, "src/done.jpg");
 		writeString(compressed, "\n");
 
@@ -42,13 +41,19 @@ public class Encoder {
 		writeString(compressed, huffman.toString());
 		writeString(compressed, "\n");
 
-		System.out.println(8 - huffman.getPadding());
-		writeString(compressed, "" + (8 - huffman.getPadding()));
+		if (huffman.getPadding() == 0) {
+			System.out.println(0);
+			writeString(compressed, "" + (0));
+		} else {
+			System.out.println(8 - huffman.getPadding());
+			writeString(compressed, "" + (8 - huffman.getPadding()));
+		}
+
 		writeString(compressed, "\n");
 
 		original.close();
 
-		original = new FileInputStream(filePath);
+		original = new BufferedInputStream(new FileInputStream(filePath));
 
 		byte writeBuffer = 0x0;
 		byte writebufferLen = 0;
@@ -82,14 +87,13 @@ public class Encoder {
 		compressed.close();
 	}
 
-	public static void writeString(FileOutputStream out, String string) throws IOException {
+	public static void writeString(BufferedOutputStream out, String string) throws IOException {
 		char[] write = string.toCharArray();
 		for (char c: write) {
 			out.write((byte) c);
 		}
 	}
 }
-
 class Node {
 	private byte rep;
 	private int data;
